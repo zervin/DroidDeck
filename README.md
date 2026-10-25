@@ -43,6 +43,8 @@ Join the [DroidDeck Discord](https://discord.gg/JRGAvawjsm) for help, Preview bu
 
 ## Build
 
+For a personal APK that carries its locally built add-on packs, run `ORG_GRADLE_PROJECT_bundleAddonPacks=true tools/build_local.sh`. After preparation, `./gradlew -PbundleAddonPacks=true :app:assembleRelease` reuses those packs. The app checks each bundled pack against the build's SHA-256 and size before extraction; a corrupt bundled pack fails installation. Without this option, the existing pack download behavior is unchanged. Bundling avoids needing to publish locally rebuilt packs to a release server.
+
 Run `tools/build_local.sh` with Docker, Java 17, the Android SDK/NDK, Rust through rustup, GitHub CLI, Python 3, and `zstd` installed. It prepares the same native libraries, pinned components and audio sinks as CI, then checks the APK's assets, JNI exports and dependencies. The APK is at `app/build/outputs/apk/release/app-release.apk`. Set `DROIDDECK_PA13_SOURCE_DIR` to an existing PulseAudio 13.0 source directory to skip downloading it. Set `DROIDDECK_SIGNING_ENV` to a signing environment file to install over a release build; relative keystore paths resolve beside that file. To install on an attached device, run `tools/deploy_local.sh`.
 
 After preparation, ordinary `./gradlew :app:assembleRelease` builds can reuse the verified inputs. If native sources, component pins or staged files change, packaging stops with instructions to rerun the helper. Generated audio stays under `app/build/`; the tracked base bundle is never modified. `./gradlew -PskipRust=true :app:testDebugUnitTest` needs no native preparation. For an APK without store engines, use `DROIDDECK_SKIP_RUST=1 tools/build_local.sh`; it omits cached engine libraries too.

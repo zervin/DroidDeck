@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
 
 /**
  * A pack built by CI alongside this APK (tools/packs). Main and release builds publish it to
@@ -104,7 +105,10 @@ internal class AddonPack(
         }
         val root = root(context).apply { mkdirs() }
         val archive = File(root, "$sha256.tar.zst")
-        val downloaded = urls.any { url ->
+        val bundled = context.assets.list("addon-packs").orEmpty().contains("$name.tar.zst")
+        val downloaded = if (bundled) {
+            copyBundledArchive(context.assets.open("addon-packs/$name.tar.zst"), archive)
+        } else urls.any { url ->
             Downloader.downloadFile(url, archive, true, sha256) { p -> mutableState.value = State.Downloading(p.coerceIn(0f, 1f)) }
                 .also { if (!it) archive.delete() }
         }
@@ -124,6 +128,16 @@ internal class AddonPack(
         }
         root.listFiles().orEmpty().filter { it.name != sha256 }.forEach { it.deleteRecursively() }
         return true
+    }
+
+    internal fun copyBundledArchive(input: InputStream, archive: File): Boolean = try {
+        input.use { source -> archive.outputStream().use { source.copyTo(it) } }
+        (archive.length() == size && sha256.equals(Hashes.sha256(archive), ignoreCase = true)).also { verified ->
+            if (!verified) archive.delete()
+        }
+    } catch (error: Exception) {
+        archive.delete()
+        throw error
     }
 
     companion object {
